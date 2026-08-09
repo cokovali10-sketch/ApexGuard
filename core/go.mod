@@ -1,6 +1,6 @@
 module github.com/apexguard/apexguard/core
 
-go 1.22
+go 1.23
 
 require (
 	github.com/coder/websocket v1.8.12
@@ -10,7 +10,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157
 	google.golang.org/grpc v1.65.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
