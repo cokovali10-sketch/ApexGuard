@@ -21,7 +21,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 backoff = { version = "0.4", features = ["tokio"] }
 dashmap = "6"
 axum = "0.7"
-prometheus = "0.13"
+prometheus = "0.14"
 num_cpus = "1"
 sharded-slab = "0.1"
 
