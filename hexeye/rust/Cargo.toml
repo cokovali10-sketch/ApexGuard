@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 goblin = { version = "0.9", features = ["elf32", "elf64", "pe32", "pe64"] }
-capstone = { version = "0.12", features = ["full"] }
+capstone = { version = "0.14", features = ["full"] }
 memmap2 = "0.9"
 rayon = "1.10"
 regex = { version = "1", default-features = false, features = ["std", "unicode"] }
