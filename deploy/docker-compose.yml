@@ -1,0 +1,151 @@
+# ApexGuard — боевой docker-compose (вся экосистема одной командой).
+# Запуск: docker compose -f deploy/docker-compose.yml up --build
+#
+# Плоскости:
+#   apexcore      — шина событий (gRPC 50051, HTTP 8080: gateway + WS + /metrics)
+#   shadownet     — honeynet (SSH 2222) + HTTP API 8081 + Ollama LLM
+#   pulsefuzz     — coverage-guided фаззер + HTTP API 9091
+#   hexeye        — статический анализатор (HTTP API 9092)
+#   apexconsole   — 3D-дашборд (80) → проксирует /v1/ и /ws/ на apexcore
+#   ollama        — локальная LLM (для десепшн)
+#   kernelshield  — eBPF-агент (только Linux-хост, privileged)
+
+services:
+  apexcore:
+    build: ../core
+    container_name: apexcore
+    environment:
+      LISTEN_GRPC: ":50051"
+      LISTEN_HTTP: ":8080"
+      PULSEFUZZ_URL: "http://pulsefuzz:9091"
+      SHADOWNET_URL: "http://shadownet:8081"
+      HEXEYE_URL: "http://hexeye:9092"
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks: [apex]
+    security_opt:
+      - no-new-privileges:true
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: "5m"
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    networks: [apex]
+
+  shadownet:
+    build: ../shadownet
+    container_name: shadownet
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_URL: "http://ollama:11434"
+    ports:
+      - "2222:2222"
+      - "8081:8081"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./state:/app/state
+    restart: unless-stopped
+    networks: [apex]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8081/healthz').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  pulsefuzz:
+    build: ../pulsefuzz
+    container_name: pulsefuzz
+    entrypoint:
+      - pulsefuzz
+      - -listen
+      - :9091
+      - -spec
+      - /app/api/openapi.json
+      - -target
+      - http://apexcore:8080
+    volumes:
+      - ../pulsefuzz/api:/app/api:ro
+    ports:
+      - "9091:9091"
+    restart: unless-stopped
+    networks: [apex]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9091/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  hexeye:
+    build: ../hexeye
+    container_name: hexeye
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    networks: [apex]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9092/healthz').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  apexconsole:
+    build: ../apexconsole
+    container_name: apexconsole
+    ports:
+      - "80:80"
+    depends_on:
+      - apexcore
+    restart: unless-stopped
+    networks: [apex]
+    security_opt:
+      - no-new-privileges:true
+
+  # ВАЖНО: требует Linux-хост с BTF (CONFIG_DEBUG_INFO_BTF). Опционально.
+  kernelshield:
+    build:
+      context: ..
+      dockerfile: kernelshield/agent/Dockerfile
+    container_name: kernelshield
+    environment:
+      AEGIS_GRPC_ENDPOINT: "http://apexcore:50051"
+      METRICS_LISTEN: "0.0.0.0:9090"
+    privileged: true
+    pid: host
+    volumes:
+      - /sys/kernel/btf:/sys/kernel/btf:ro
+      - /proc:/proc:ro
+    restart: unless-stopped
+    networks: [apex]
+    profiles: ["kernel"]
+
+networks:
+  apex:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  ollama-data:

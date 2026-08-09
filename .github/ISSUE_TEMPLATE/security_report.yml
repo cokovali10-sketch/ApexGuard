@@ -1,0 +1,14 @@
+---
+name: Security vulnerability
+about: Report a security issue privately
+title: "[SECURITY] "
+labels: security
+assignees: ''
+---
+
+:warning: **Do not include exploit details or secrets in a public issue.**
+
+Security vulnerabilities should be reported through the private process
+described in [SECURITY.md](../../SECURITY.md). Use this issue template only
+for *non-sensitive* security hardening requests (e.g. "add Origin check to WS
+handler") where no live vulnerability is disclosed.

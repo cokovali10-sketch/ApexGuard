@@ -1,0 +1,47 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+*.local
+.npmrc
+
+# --- Go ---
+bin/
+*.test
+*.out
+coverage.*
+
+# --- Rust ---
+target/
+Cargo.lock.orig
+
+# --- eBPF / KernelShield ---
+vmlinux.h
+*.o
+*.bpf.o
+
+# --- Runtime secrets & state ---
+host_rsa.key
+host_ecdsa.key
+shadownet_events.jsonl
+state/
+*.pem
+!**/testdata/**/*.pem

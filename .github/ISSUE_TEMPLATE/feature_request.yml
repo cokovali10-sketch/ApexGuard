@@ -1,0 +1,24 @@
+---
+name: Feature request
+about: Suggest a new capability or improvement
+title: "[FEATURE] "
+labels: enhancement
+assignees: ''
+---
+
+## Problem
+
+What problem are you trying to solve? Who is affected?
+
+## Proposed solution
+
+Describe the feature and how it would fit into the platform
+(event bus, console, deployment).
+
+## Alternatives considered
+
+Any workarounds or alternative designs.
+
+## Additional context
+
+Mockups, links, related TTPs/MITRE references, etc.

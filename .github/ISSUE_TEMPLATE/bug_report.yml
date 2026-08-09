@@ -1,0 +1,47 @@
+---
+name: Bug report
+about: Report a reproducible bug in a module
+title: "[BUG] "
+labels: bug
+assignees: ''
+---
+
+## Description
+
+A clear and concise description of the bug.
+
+## Module
+
+- [ ] ApexCore (`core/`)
+- [ ] KernelShield (`kernelshield/`)
+- [ ] PulseFuzz (`pulsefuzz/`)
+- [ ] ShadowNet (`shadownet/`)
+- [ ] HexEye (`hexeye/`)
+- [ ] ApexConsole (`apexconsole/`)
+- [ ] Deployment (`deploy/`)
+- [ ] Other
+
+## Steps to reproduce
+
+1. ...
+2. ...
+3. ...
+
+## Expected behavior
+
+What you expected to happen.
+
+## Actual behavior
+
+What actually happened (logs, stack traces, screenshots).
+
+## Environment
+
+- OS / kernel version:
+- Go / Python / Node versions:
+- Docker / compose version:
+- Deployment (docker-compose / helm / local):
+
+## Additional context
+
+Any other relevant information.

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ApexGuard — AegisX Core Console</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <aside id="side-panel" class="glass">
+    <header>
+      <h1>APEXGUARD <span class="dim">// AegisX Core</span></h1>
+      <div class="status" id="ws-status"><span class="dot"></span> CONNECTING</div>
+    </header>
+
+    <section>
+      <h2>Фильтр алертов</h2>
+      <div class="filters" id="severity-filters">
+        <button data-sev="CRITICAL" class="active crit">CRITICAL</button>
+        <button data-sev="HIGH" class="active high">HIGH</button>
+        <button data-sev="MEDIUM" class="active med">MEDIUM</button>
+        <button data-sev="LOW" class="active low">LOW</button>
+        <button data-sev="INFO" class="active info">INFO</button>
+      </div>
+      <div class="filters" id="source-filters">
+        <button data-src="KERNELSHIELD" class="active">KERNEL</button>
+        <button data-src="PULSEFUZZ" class="active">FUZZ</button>
+        <button data-src="SHADOWNET" class="active">HONEY</button>
+        <button data-src="HEXEYE" class="active">RE</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Управление</h2>
+      <div class="controls">
+        <div class="row">
+          <input id="ip-input" placeholder="IP для блокировки" />
+          <button id="btn-block" class="danger">Block IP</button>
+        </div>
+        <div class="row">
+          <button id="btn-reload">Reload eBPF probes</button>
+          <button id="btn-fuzz">Run Fuzz job</button>
+        </div>
+        <div class="row">
+          <button id="btn-honeypot">Spawn honeypot</button>
+          <button id="btn-analyze">Analyze binary</button>
+        </div>
+        <div class="row">
+          <button id="btn-panic" class="panic">AIR-GAP (panic)</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Attack feed</h2>
+      <div id="src-stats" class="src-stats">
+        <span><i id="src-kernelshield" class="sw info"></i>KERNEL <b id="c-kernelshield">0</b></span>
+        <span><i id="src-pulsefuzz" class="sw info"></i>FUZZ <b id="c-pulsefuzz">0</b></span>
+        <span><i id="src-shadownet" class="sw info"></i>HONEY <b id="c-shadownet">0</b></span>
+        <span><i id="src-hexeye" class="sw info"></i>RE <b id="c-hexeye">0</b></span>
+        <span><i id="src-core" class="sw info"></i>CORE <b id="c-core">0</b></span>
+      </div>
+      <ul id="feed" class="feed"></ul>
+    </section>
+  </aside>
+
+  <div id="legend" class="glass">
+    <div><span class="sw crit"></span> Critical</div>
+    <div><span class="sw high"></span> High</div>
+    <div><span class="sw med"></span> Medium</div>
+    <div><span class="sw low"></span> Low</div>
+    <div><span class="sw info"></span> Info</div>
+  </div>
+
+  <div id="hud" class="glass">
+    <div><b id="m-eps">0</b> events/s</div>
+    <div><b id="m-lat">0</b> ms e2e</div>
+    <div><b id="m-alerts">0</b> alerts</div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

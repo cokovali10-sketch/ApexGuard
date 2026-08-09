@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["shadownet/tests", "hexeye/tests"]
+addopts = "-ra -q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["shadownet", "hexeye"]
+omit = ["*/tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 50

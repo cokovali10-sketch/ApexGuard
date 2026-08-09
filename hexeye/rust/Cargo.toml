@@ -1,0 +1,23 @@
+[package]
+name = "hexeye-core"
+version = "1.0.0"
+edition = "2021"
+description = "HexEye static analyzer core (ELF/PE, secrets, CFG, UAF/DoubleFree)"
+license = "Apache-2.0"
+
+[dependencies]
+goblin = { version = "0.9", features = ["elf32", "elf64", "pe32", "pe64"] }
+capstone = { version = "0.12", features = ["full"] }
+memmap2 = "0.9"
+rayon = "1.10"
+regex = { version = "1", default-features = false, features = ["std", "unicode"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+sha2 = "0.10"
+clap = { version = "4", features = ["derive"] }
+rustc-hash = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,87 @@
+# ApexGuard Helm values — production defaults.
+replicaCount: 1
+
+images:
+  apexcore: ghcr.io/apexguard/apexcore:1.0.0
+  shadownet: ghcr.io/apexguard/shadownet:1.0.0
+  pulsefuzz: ghcr.io/apexguard/pulsefuzz:1.0.0
+  hexeye: ghcr.io/apexguard/hexeye:1.0.0
+  console: ghcr.io/apexguard/apexconsole:1.0.0
+  ollama: ollama/ollama:latest
+  agent: ghcr.io/apexguard/kernelshield-agent:1.0.0
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+core:
+  grpcPort: 50051
+  httpPort: 8080
+  replicas: 2
+  resources:
+    requests: { cpu: "250m", memory: "256Mi" }
+    limits: { cpu: "2", memory: "1Gi" }
+
+shadownet:
+  port: 2222
+  replicas: 1
+  ollamaModel: qwen2.5:7b
+  dockerSocketEnabled: false   # set true + hostPath for container orchestration
+  resources:
+    requests: { cpu: "200m", memory: "256Mi" }
+    limits: { cpu: "1", memory: "768Mi" }
+
+pulsefuzz:
+  replicas: 1
+  concurrency: 50
+  resources:
+    requests: { cpu: "200m", memory: "256Mi" }
+    limits: { cpu: "2", memory: "1Gi" }
+
+hexeye:
+  replicas: 2
+  resources:
+    requests: { cpu: "500m", memory: "512Mi" }
+    limits: { cpu: "4", memory: "2Gi" }
+
+console:
+  replicas: 2
+  resources:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits: { cpu: "1", memory: "512Mi" }
+
+ollama:
+  replicas: 1
+  resources:
+    requests: { cpu: "500m", memory: "4Gi" }
+    limits: { cpu: "8", memory: "16Gi" }
+
+kernelshield:
+  replicas: 1
+  privileged: true
+  hostPID: true
+  btfEnabled: true   # требует BTF-enabled узлы
+
+tls:
+  enabled: false
+  certSecret: apexguard-tls
+  caSecret: apexguard-ca
+
+ingress:
+  enabled: true
+  className: nginx
+  host: aegis.example.com
+  annotations: {}
+
+persistence:
+  ollama:
+    enabled: true
+    size: 50Gi
+    storageClass: ""
+
+metrics:
+  enabled: true
+
+# JWT secret for honeypot watermark / console auth
+secrets:
+  honeyHmac: ""
+  jwtSecret: ""

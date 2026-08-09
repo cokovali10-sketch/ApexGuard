@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package aegis.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/apexguard/apexguard/core/gen;aegisv1";
+
+// ============================================================================
+// Event Bus: нормализованные события безопасности и метрики.
+// Транспорт: gRPC stream (AegisCore.StreamEvents) + WS-продакшн для консоли.
+// ============================================================================
+
+enum EventSource {
+  EVENT_SOURCE_UNSPECIFIED = 0;
+  EVENT_SOURCE_KERNELSHIELD = 1; // eBPF-зонды
+  EVENT_SOURCE_PULSEFUZZ    = 2; // фаззинг API
+  EVENT_SOURCE_SHADOWNET    = 3; // honeynet / десепшн
+  EVENT_SOURCE_HEXEYE       = 4; // реверс-инжиниринг
+  EVENT_SOURCE_CORE         = 5; // сама платформа
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED  = 0;
+  EVENT_TYPE_EXECVE       = 1;  // sys_enter_execve
+  EVENT_TYPE_CONNECT      = 2;  // sys_enter_connect
+  EVENT_TYPE_PTRACE       = 3;  // sys_enter_ptrace
+  EVENT_TYPE_PRIVILEGE    = 4;  // setuid / LPE
+  EVENT_TYPE_NAMESPACE    = 5;  // обход namespaces
+  EVENT_TYPE_BLOCKED      = 6;  // мгновенная блокировка (kernel drop/kill)
+  EVENT_TYPE_MUTATION     = 7;  // PulseFuzz: мутация отправлена
+  EVENT_TYPE_ANOMALY      = 8;  // PulseFuzz: аномалия детектирована
+  EVENT_TYPE_DECEPTION    = 9;  // ShadowNet: контакт с ловушкой
+  EVENT_TYPE_HONEY_CMD    = 10; // ShadowNet: команда атакующего
+  EVENT_TYPE_SECRET_FOUND = 11; // HexEye: секрет в бинарнике
+  EVENT_TYPE_VULN_FOUND   = 12; // HexEye: потенциальная уязвимость
+  EVENT_TYPE_CORRELATED   = 13; // Core: корреляция (attack chain)
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO        = 1;
+  SEVERITY_LOW         = 2;
+  SEVERITY_MEDIUM      = 3;
+  SEVERITY_HIGH        = 4;
+  SEVERITY_CRITICAL    = 5;
+}
+
+message ThreatEvent {
+  string          event_id       = 1;  // UUIDv7
+  google.protobuf.Timestamp ts   = 2;
+  EventSource     source         = 3;
+  EventType       type           = 4;
+  Severity        severity       = 5;
+  string          host_id        = 6;  // узел в 3D-топологии
+  string          container_id   = 7;  // cgroup
+  string          pid_namespace  = 8;
+  uint32          pid            = 9;
+  uint32          ppid           = 10;
+  string          comm           = 11; // имя процесса
+  map<string,string> context     = 12; // argv, remote_ip, request_uri, dst_port...
+  string          mitre_technique = 13; // T1055, T1071...
+  bool            blocked        = 14; // true если событие привело к блокировке
+  bytes           raw_payload    = 15; // фрагмент пейлоада / аргументов
+}
+
+message AnomalyAlert {
+  string               alert_id = 1;
+  string               rule     = 2;   // имя правила корреляции
+  float                risk_score = 3; // 0.0..1.0
+  string               killchain_stage = 4; // Recon/Weaponization/Delivery...
+  string               recommendation  = 5;
+  repeated ThreatEvent evidence = 6;   // attack chain
+}
+
+message SystemMetric {
+  string   host_id         = 1;
+  float    cpu_usage       = 2;  // 0..1
+  uint64   mem_bytes       = 3;
+  uint64   net_rx_bytes    = 4;
+  uint64   net_tx_bytes    = 5;
+  uint32   event_rate_eps  = 6;
+  float    latency_ms      = 7;  // end-to-end (kernel→UI)
+  google.protobuf.Timestamp ts = 8;
+}
+
+// ============================================================================
+// Управляющие команды (консоль → модули через Core).
+// ============================================================================
+
+message BlockIpRequest {
+  string ip = 1;
+  bool   persist = 2;  // записать в firewall (persistent) или только eBPF drop
+}
+message BlockIpResponse { bool ok = 1; }
+
+message ReloadRequest   { repeated string probe_names = 1; }
+message ReloadResponse  { bool ok = 1; }
+
+message FuzzRequest {
+  string target_url = 1;
+  string spec_path  = 2;   // OpenAPI/GraphQL schema
+  enum Protocol { REST = 0; GRAPHQL = 1; GRPC = 2; }
+  Protocol protocol = 3;
+  uint32 concurrency = 4;
+  repeated string fuzz_modes = 5; // SQLI, SSTI, IDOR, BLA, CHAOS
+}
+message FuzzJob {
+  string job_id = 1;
+  string status = 2; // QUEUED | RUNNING | DONE
+}
+
+message HoneypotSpec {
+  repeated string services = 1; // SSH, HTTP, FTP, RDP
+  string   network   = 2;       // bridge name
+  string   llm_model = 3;       // ollama model id
+}
+message HoneypotStatus { string honeypot_id = 1; string status = 2; }
+
+message BinaryPath { string path = 1; }
+message AnalysisReport {
+  string            sha256 = 1;
+  repeated string   secrets = 2;
+  repeated string   dangerous_calls = 3; // strcpy/gets/system...
+  repeated string   candidate_vulns = 4; // UAF/BOF локации
+  string            json_report = 5;     // полный отчёт (r2)
+}
+
+message StreamFilter { repeated EventSource sources = 1; Severity min_severity = 2; }
+
+// --- Ингресс: агенты открывают долгоживущий стрим в шину ---
+message PublishAck {
+  uint64 accepted = 1; // число принятых событий (для восстановления после reconnect)
+  uint64 watermark = 2; // скользящий HWM серийных номеров
+}
+
+// --- Канал команд от Core к агентам (push-модель) ---
+message WatchRequest {}
+
+message Command {
+  string   command_id = 1; // UUIDv7 для идемпотентности
+  oneof action {
+    BlockIpRequest block_ip = 2;
+    ReloadRequest  reload_probes = 3;
+    AirGapRequest  air_gap = 4;
+  }
+}
+
+message AirGapRequest {
+  bool   engage = 1; // true = изоляция, false = снятие
+  string reason = 2;
+}
+message AirGapResponse { bool engaged = 1; }
+
+service AegisCore {
+  rpc StreamEvents(StreamFilter) returns (stream ThreatEvent);
+  rpc Publish(stream ThreatEvent) returns (PublishAck);      // агенты → шина
+  rpc WatchCommands(WatchRequest) returns (stream Command);  // шина → агенты
+  rpc BlockIp(BlockIpRequest) returns (BlockIpResponse) {
+    option (google.api.http) = {
+      post: "/v1/block-ip"
+      body: "*"
+    };
+  }
+  rpc ReloadProbes(ReloadRequest) returns (ReloadResponse) {
+    option (google.api.http) = {
+      post: "/v1/reload-probes"
+      body: "*"
+    };
+  }
+  rpc TriggerFuzz(FuzzRequest) returns (FuzzJob) {
+    option (google.api.http) = {
+      post: "/v1/trigger-fuzz"
+      body: "*"
+    };
+  }
+  rpc SpawnHoneypot(HoneypotSpec) returns (HoneypotStatus) {
+    option (google.api.http) = {
+      post: "/v1/spawn-honeypot"
+      body: "*"
+    };
+  }
+  rpc AnalyzeBinary(BinaryPath) returns (AnalysisReport) {
+    option (google.api.http) = {
+      post: "/v1/analyze-binary"
+      body: "*"
+    };
+  }
+  rpc AirGap(AirGapRequest) returns (AirGapResponse) {
+    option (google.api.http) = {
+      post: "/v1/airgap"
+      body: "*"
+    };
+  }
+}

@@ -1,0 +1,564 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "events.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AegisCore"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/airgap": {
+      "post": {
+        "operationId": "AegisCore_AirGap",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AirGapResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AirGapRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    },
+    "/v1/analyze-binary": {
+      "post": {
+        "operationId": "AegisCore_AnalyzeBinary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AnalysisReport"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BinaryPath"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    },
+    "/v1/block-ip": {
+      "post": {
+        "operationId": "AegisCore_BlockIp",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BlockIpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BlockIpRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    },
+    "/v1/reload-probes": {
+      "post": {
+        "operationId": "AegisCore_ReloadProbes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReloadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ReloadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    },
+    "/v1/spawn-honeypot": {
+      "post": {
+        "operationId": "AegisCore_SpawnHoneypot",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HoneypotStatus"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1HoneypotSpec"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    },
+    "/v1/trigger-fuzz": {
+      "post": {
+        "operationId": "AegisCore_TriggerFuzz",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FuzzJob"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1FuzzRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AegisCore"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "FuzzRequestProtocol": {
+      "type": "string",
+      "enum": [
+        "REST",
+        "GRAPHQL",
+        "GRPC"
+      ],
+      "default": "REST"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AirGapRequest": {
+      "type": "object",
+      "properties": {
+        "engage": {
+          "type": "boolean",
+          "title": "true = изоляция, false = снятие"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AirGapResponse": {
+      "type": "object",
+      "properties": {
+        "engaged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1AnalysisReport": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dangerous_calls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "strcpy/gets/system..."
+        },
+        "candidate_vulns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "UAF/BOF локации"
+        },
+        "json_report": {
+          "type": "string",
+          "title": "полный отчёт (r2)"
+        }
+      }
+    },
+    "v1BinaryPath": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "v1BlockIpRequest": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "persist": {
+          "type": "boolean",
+          "title": "записать в firewall (persistent) или только eBPF drop"
+        }
+      }
+    },
+    "v1BlockIpResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1Command": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "title": "UUIDv7 для идемпотентности"
+        },
+        "block_ip": {
+          "$ref": "#/definitions/v1BlockIpRequest"
+        },
+        "reload_probes": {
+          "$ref": "#/definitions/v1ReloadRequest"
+        },
+        "air_gap": {
+          "$ref": "#/definitions/v1AirGapRequest"
+        }
+      }
+    },
+    "v1EventSource": {
+      "type": "string",
+      "enum": [
+        "EVENT_SOURCE_UNSPECIFIED",
+        "EVENT_SOURCE_KERNELSHIELD",
+        "EVENT_SOURCE_PULSEFUZZ",
+        "EVENT_SOURCE_SHADOWNET",
+        "EVENT_SOURCE_HEXEYE",
+        "EVENT_SOURCE_CORE"
+      ],
+      "default": "EVENT_SOURCE_UNSPECIFIED",
+      "title": "- EVENT_SOURCE_KERNELSHIELD: eBPF-зонды\n - EVENT_SOURCE_PULSEFUZZ: фаззинг API\n - EVENT_SOURCE_SHADOWNET: honeynet / десепшн\n - EVENT_SOURCE_HEXEYE: реверс-инжиниринг\n - EVENT_SOURCE_CORE: сама платформа"
+    },
+    "v1EventType": {
+      "type": "string",
+      "enum": [
+        "EVENT_TYPE_UNSPECIFIED",
+        "EVENT_TYPE_EXECVE",
+        "EVENT_TYPE_CONNECT",
+        "EVENT_TYPE_PTRACE",
+        "EVENT_TYPE_PRIVILEGE",
+        "EVENT_TYPE_NAMESPACE",
+        "EVENT_TYPE_BLOCKED",
+        "EVENT_TYPE_MUTATION",
+        "EVENT_TYPE_ANOMALY",
+        "EVENT_TYPE_DECEPTION",
+        "EVENT_TYPE_HONEY_CMD",
+        "EVENT_TYPE_SECRET_FOUND",
+        "EVENT_TYPE_VULN_FOUND",
+        "EVENT_TYPE_CORRELATED"
+      ],
+      "default": "EVENT_TYPE_UNSPECIFIED",
+      "title": "- EVENT_TYPE_EXECVE: sys_enter_execve\n - EVENT_TYPE_CONNECT: sys_enter_connect\n - EVENT_TYPE_PTRACE: sys_enter_ptrace\n - EVENT_TYPE_PRIVILEGE: setuid / LPE\n - EVENT_TYPE_NAMESPACE: обход namespaces\n - EVENT_TYPE_BLOCKED: мгновенная блокировка (kernel drop/kill)\n - EVENT_TYPE_MUTATION: PulseFuzz: мутация отправлена\n - EVENT_TYPE_ANOMALY: PulseFuzz: аномалия детектирована\n - EVENT_TYPE_DECEPTION: ShadowNet: контакт с ловушкой\n - EVENT_TYPE_HONEY_CMD: ShadowNet: команда атакующего\n - EVENT_TYPE_SECRET_FOUND: HexEye: секрет в бинарнике\n - EVENT_TYPE_VULN_FOUND: HexEye: потенциальная уязвимость\n - EVENT_TYPE_CORRELATED: Core: корреляция (attack chain)"
+    },
+    "v1FuzzJob": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "QUEUED | RUNNING | DONE"
+        }
+      }
+    },
+    "v1FuzzRequest": {
+      "type": "object",
+      "properties": {
+        "target_url": {
+          "type": "string"
+        },
+        "spec_path": {
+          "type": "string",
+          "title": "OpenAPI/GraphQL schema"
+        },
+        "protocol": {
+          "$ref": "#/definitions/FuzzRequestProtocol"
+        },
+        "concurrency": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "fuzz_modes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "SQLI, SSTI, IDOR, BLA, CHAOS"
+        }
+      }
+    },
+    "v1HoneypotSpec": {
+      "type": "object",
+      "properties": {
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "SSH, HTTP, FTP, RDP"
+        },
+        "network": {
+          "type": "string",
+          "title": "bridge name"
+        },
+        "llm_model": {
+          "type": "string",
+          "title": "ollama model id"
+        }
+      }
+    },
+    "v1HoneypotStatus": {
+      "type": "object",
+      "properties": {
+        "honeypot_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1PublishAck": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "string",
+          "format": "uint64",
+          "title": "число принятых событий (для восстановления после reconnect)"
+        },
+        "watermark": {
+          "type": "string",
+          "format": "uint64",
+          "title": "скользящий HWM серийных номеров"
+        }
+      },
+      "title": "--- Ингресс: агенты открывают долгоживущий стрим в шину ---"
+    },
+    "v1ReloadRequest": {
+      "type": "object",
+      "properties": {
+        "probe_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1ReloadResponse": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1Severity": {
+      "type": "string",
+      "enum": [
+        "SEVERITY_UNSPECIFIED",
+        "SEVERITY_INFO",
+        "SEVERITY_LOW",
+        "SEVERITY_MEDIUM",
+        "SEVERITY_HIGH",
+        "SEVERITY_CRITICAL"
+      ],
+      "default": "SEVERITY_UNSPECIFIED"
+    },
+    "v1ThreatEvent": {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "title": "UUIDv7"
+        },
+        "ts": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "$ref": "#/definitions/v1EventSource"
+        },
+        "type": {
+          "$ref": "#/definitions/v1EventType"
+        },
+        "severity": {
+          "$ref": "#/definitions/v1Severity"
+        },
+        "host_id": {
+          "type": "string",
+          "title": "узел в 3D-топологии"
+        },
+        "container_id": {
+          "type": "string",
+          "title": "cgroup"
+        },
+        "pid_namespace": {
+          "type": "string"
+        },
+        "pid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "ppid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "comm": {
+          "type": "string",
+          "title": "имя процесса"
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "argv, remote_ip, request_uri, dst_port..."
+        },
+        "mitre_technique": {
+          "type": "string",
+          "description": "T1055, T1071..."
+        },
+        "blocked": {
+          "type": "boolean",
+          "title": "true если событие привело к блокировке"
+        },
+        "raw_payload": {
+          "type": "string",
+          "format": "byte",
+          "title": "фрагмент пейлоада / аргументов"
+        }
+      }
+    }
+  }
+}

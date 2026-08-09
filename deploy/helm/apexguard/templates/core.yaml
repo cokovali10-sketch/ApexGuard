@@ -1,0 +1,85 @@
+﻿# ApexCore — event bus deployment + service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apexguard.fullname" . }}-core
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  replicas: {{ .Values.core.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: apexguard
+      app.kubernetes.io/component: core
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: apexguard
+        app.kubernetes.io/component: core
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.core.httpPort }}"
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: apexcore
+          image: "{{ .Values.images.apexcore }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "apexguard.fullname" . }}-config
+          {{- if .Values.tls.enabled }}
+          env:
+            - name: TLS_CERT
+              value: /tls/tls.crt
+            - name: TLS_KEY
+              value: /tls/tls.key
+            - name: TLS_CA
+              value: /tls/ca.crt
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+          {{- end }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.core.grpcPort }}
+            - name: http
+              containerPort: {{ .Values.core.httpPort }}
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+          resources: {{ toYaml .Values.core.resources | nindent 12 }}
+      {{- if .Values.tls.enabled }}
+      volumes:
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.certSecret }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apexguard.fullname" . }}-core
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/part-of: apexguard
+    app.kubernetes.io/component: core
+  ports:
+    - name: grpc
+      port: {{ .Values.core.grpcPort }}
+      targetPort: grpc
+    - name: http
+      port: {{ .Values.core.httpPort }}
+      targetPort: http

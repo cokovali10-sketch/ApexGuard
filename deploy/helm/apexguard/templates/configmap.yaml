@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "apexguard.fullname" . }}-config
+  labels: {{- include "apexguard.labels" . | nindent 4 }}
+data:
+  # ApexCore — подключение к модулям (envFrom: ConfigMapRef)
+  LISTEN_GRPC: ":{{ .Values.core.grpcPort }}"
+  LISTEN_HTTP: ":{{ .Values.core.httpPort }}"
+  PULSEFUZZ_URL: "http://{{ include "apexguard.fullname" . }}-pulsefuzz:9091"
+  SHADOWNET_URL: "http://{{ include "apexguard.fullname" . }}-shadownet:8081"
+  HEXEYE_URL: "http://{{ include "apexguard.fullname" . }}-hexeye:9092"
+  # ShadowNet — локальная LLM
+  OLLAMA_URL: "http://{{ include "apexguard.fullname" . }}-ollama:11434"
+  OLLAMA_MODEL: "{{ .Values.shadownet.ollamaModel }}"
+  # PulseFuzz
+  PULSEFUZZ_CONCURRENCY: "{{ .Values.pulsefuzz.concurrency }}"
+  # OpenAPI-спектр (пример) для PulseFuzz — монтируется в /app/api/openapi.json
+  openapi.json: |
+    {
+      "openapi": "3.0.0",
+      "info": { "title": "ApexCore Demo API", "version": "1.0.0" },
+      "paths": {
+        "/healthz": {
+          "get": {
+            "operationId": "health",
+            "parameters": [],
+            "responses": { "200": { "description": "ok" } }
+          }
+        },
+        "/api/users": {
+          "get": {
+            "operationId": "listUsers",
+            "parameters": [],
+            "responses": { "200": { "description": "ok" } }
+          },
+          "post": {
+            "operationId": "createUser",
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "username": { "type": "string" },
+                      "email": { "type": "string" },
+                      "role": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            },
+            "responses": { "201": { "description": "created" } }
+          }
+        },
+        "/api/users/{id}": {
+          "get": {
+            "operationId": "getUser",
+            "parameters": [
+              { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+            ],
+            "responses": { "200": { "description": "ok" } }
+          }
+        }
+      }
+    }
+  # Nginx-конфиг ApexConsole (монтируется в deployment console)
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+      location / { try_files $uri $uri/ /index.html; }
+      location /v1/ {
+        proxy_pass http://{{ include "apexguard.fullname" . }}-core:{{ .Values.core.httpPort }};
+        proxy_http_version 1.1;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+      location /ws/ {
+        proxy_pass http://{{ include "apexguard.fullname" . }}-core:{{ .Values.core.httpPort }};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+      }
+      location /metrics { proxy_pass http://{{ include "apexguard.fullname" . }}-core:{{ .Values.core.httpPort }}; }
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "apexguard.fullname" . }}-secrets
+  labels: {{- include "apexguard.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  honey-hmac: {{ .Values.secrets.honeyHmac | default (randAlphaNum 24) | quote }}
+  jwt-secret: {{ .Values.secrets.jwtSecret | default (randAlphaNum 32) | quote }}

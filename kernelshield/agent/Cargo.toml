@@ -1,0 +1,36 @@
+[package]
+name = "apexguard-agent"
+version = "1.0.0"
+edition = "2021"
+description = "KernelShield user-space agent: eBPF ring buffer, cgroup2/container resolution, gRPC bus ingest"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+libbpf-rs = "0.24"
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
+uuid = { version = "1", features = ["v7"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+backoff = { version = "0.4", features = ["tokio"] }
+dashmap = "6"
+axum = "0.7"
+prometheus = "0.13"
+num_cpus = "1"
+sharded-slab = "0.1"
+
+[build-dependencies]
+libbpf-cargo = "0.24"
+tonic-build = "0.12"
+protoc-bin-vendored = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"

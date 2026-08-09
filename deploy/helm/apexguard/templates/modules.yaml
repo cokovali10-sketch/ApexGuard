@@ -1,0 +1,229 @@
+﻿# ShadowNet + Ollama + PulseFuzz + HexEye deployments and services.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apexguard.fullname" . }}-shadownet
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shadownet
+spec:
+  replicas: {{ .Values.shadownet.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: apexguard
+      app.kubernetes.io/component: shadownet
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: apexguard
+        app.kubernetes.io/component: shadownet
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: shadownet
+          image: "{{ .Values.images.shadownet }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          args: ["--host", "0.0.0.0", "--port", "2222"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "apexguard.fullname" . }}-config
+          env:
+            - name: APEX_HONEY_HMAC
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "apexguard.fullname" . }}-secrets
+                  key: honey-hmac
+          ports:
+            - name: ssh
+              containerPort: 2222
+            - name: http
+              containerPort: 8081
+          resources: {{ toYaml .Values.shadownet.resources | nindent 12 }}
+          {{- if .Values.shadownet.dockerSocketEnabled }}
+          volumeMounts:
+            - name: dockersock
+              mountPath: /var/run/docker.sock
+          {{- end }}
+      {{- if .Values.shadownet.dockerSocketEnabled }}
+      volumes:
+        - name: dockersock
+          hostPath: { path: /var/run/docker.sock }
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apexguard.fullname" . }}-shadownet
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/part-of: apexguard
+    app.kubernetes.io/component: shadownet
+  ports:
+    - name: ssh
+      port: 2222
+      targetPort: ssh
+    - name: http
+      port: 8081
+      targetPort: http
+---
+# Ollama
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apexguard.fullname" . }}-ollama
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  replicas: {{ .Values.ollama.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: apexguard
+      app.kubernetes.io/component: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: apexguard
+        app.kubernetes.io/component: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: "{{ .Values.images.ollama }}"
+          env:
+            - name: OLLAMA_KEEP_ALIVE
+              value: "5m"
+          ports:
+            - name: api
+              containerPort: 11434
+          volumeMounts:
+            - name: data
+              mountPath: /root/.ollama
+          resources: {{ toYaml .Values.ollama.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "apexguard.fullname" . }}-ollama
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apexguard.fullname" . }}-ollama
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/part-of: apexguard
+    app.kubernetes.io/component: ollama
+  ports:
+    - name: api
+      port: 11434
+      targetPort: api
+---
+# PulseFuzz
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apexguard.fullname" . }}-pulsefuzz
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pulsefuzz
+spec:
+  replicas: {{ .Values.pulsefuzz.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: apexguard
+      app.kubernetes.io/component: pulsefuzz
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: apexguard
+        app.kubernetes.io/component: pulsefuzz
+    spec:
+      containers:
+        - name: pulsefuzz
+          image: "{{ .Values.images.pulsefuzz }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          args: ["-listen", ":9091", "-spec", "/app/api/openapi.json", "-target", "http://{{ include "apexguard.fullname" . }}-core:{{ .Values.core.httpPort }}"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "apexguard.fullname" . }}-config
+          volumeMounts:
+            - name: spec
+              mountPath: /app/api/openapi.json
+              subPath: openapi.json
+              readOnly: true
+          ports:
+            - name: http
+              containerPort: 9091
+          resources: {{ toYaml .Values.pulsefuzz.resources | nindent 12 }}
+      volumes:
+        - name: spec
+          configMap:
+            name: {{ include "apexguard.fullname" . }}-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apexguard.fullname" . }}-pulsefuzz
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/part-of: apexguard
+    app.kubernetes.io/component: pulsefuzz
+  ports:
+    - name: http
+      port: 9091
+      targetPort: http
+---
+# HexEye
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apexguard.fullname" . }}-hexeye
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hexeye
+spec:
+  replicas: {{ .Values.hexeye.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: apexguard
+      app.kubernetes.io/component: hexeye
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: apexguard
+        app.kubernetes.io/component: hexeye
+    spec:
+      containers:
+        - name: hexeye
+          image: "{{ .Values.images.hexeye }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          args: ["--listen", "0.0.0.0:9092"]
+          ports:
+            - name: http
+              containerPort: 9092
+          resources: {{ toYaml .Values.hexeye.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apexguard.fullname" . }}-hexeye
+  labels:
+    {{- include "apexguard.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/part-of: apexguard
+    app.kubernetes.io/component: hexeye
+  ports:
+    - name: http
+      port: 9092
+      targetPort: http

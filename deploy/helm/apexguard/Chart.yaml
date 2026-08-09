@@ -1,0 +1,14 @@
+apiVersion: v2
+name: apexguard
+description: ApexGuard (AegisX Core Suite) - autonomous enterprise defense cluster
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - security
+  - eBPF
+  - honeynet
+  - fuzzing
+  - deception
+maintainers:
+  - name: ApexGuard Team

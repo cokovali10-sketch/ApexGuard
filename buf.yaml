@@ -1,0 +1,12 @@
+# ApexGuard — buf workspace (root). Модуль proto → генерация в core/gen.
+version: v2
+modules:
+  - path: proto
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

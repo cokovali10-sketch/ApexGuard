@@ -1,0 +1,20 @@
+# buf generate (из корня репозитория) — Go-код в core/gen + OpenAPI в core/gen/openapiv2.
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.34.2
+    out: core/gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go:v1.4.0
+    out: core/gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc-ecosystem/gateway:v2.20.0
+    out: core/gen
+    opt:
+      - paths=source_relative
+      - generate_unbound_methods=false
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.20.0
+    out: core/gen/openapiv2
+    opt:
+      - json_names_for_fields=false
