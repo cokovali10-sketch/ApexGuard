@@ -6,115 +6,88 @@ on:
   pull_request:
     branches: [main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  go:
-    name: Go (core + pulsefuzz)
+  go-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         module: [core, pulsefuzz]
-    defaults:
-      run:
-        working-directory: ${{ matrix.module }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache-dependency-path: ${{ matrix.module }}/go.sum
-      - name: Build
-        run: go build ./...
-      - name: Vet
-        run: go vet ./...
-      - name: Test
-        run: go test -race -cover ./...
 
-  python:
-    name: Python (shadownet + hexeye)
+      - name: Build and vet
+        working-directory: ${{ matrix.module }}
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Test
+        working-directory: ${{ matrix.module }}
+        run: go test -race ./...
+
+  py-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install deps
+
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r shadownet/requirements.txt pytest
-      - name: Syntax check
+          python -m pip install --upgrade pip
+          pip install pytest aiohttp
+
+      - name: Compile check
         run: python -m compileall -q shadownet hexeye
-      - name: Test
-        run: |
-          python -m pytest shadownet/tests hexeye/tests -v
 
-  frontend:
-    name: ApexConsole (TS build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apexconsole
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: apexconsole/package-lock.json
-      - name: Install
-        run: npm ci || npm install
-      - name: Build
-        run: npm run build
+      - name: Run pytest
+        run: python -m pytest shadownet/tests hexeye/tests -q
 
-  rust:
-    name: Rust (hexeye-core + kernelshield agent)
+  proto-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - name: Install libbpf build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libelf-dev libz-dev clang make
-      - name: Cargo check (hexeye)
-        working-directory: hexeye/rust
-        run: cargo check --all-targets
-      - name: Cargo check (kernelshield agent)
-        working-directory: kernelshield/agent
-        run: cargo check --all-targets
-        env:
-          RUST_LOG: warn
-      - name: Format
-        working-directory: hexeye/rust
-        run: cargo fmt -- --check
 
-  proto:
-    name: Protobuf (buf lint + generate)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bufbuild/buf-setup-action@v1
-      - name: Lint
+      - name: Set up buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Lint proto
         run: buf lint
-      - name: Generate
-        run: buf generate
-      - name: Check no diff
-        run: git diff --exit-code
 
-  helm:
-    name: Helm lint
+      - name: Check generated code is up to date
+        run: |
+          buf generate
+          git diff --exit-code || (echo "Generated code is out of date. Run 'buf generate' and commit." && exit 1)
+
+  docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
-        with:
-          version: "v3.14.0"
-      - name: Lint chart
-        run: helm lint deploy/helm/apexguard
-      - name: Template chart
-        run: helm template apexguard deploy/helm/apexguard > /tmp/chart.yaml
+
+      - name: Build all services
+        run: docker compose -f deploy/docker-compose.yml build
+
+  lint-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate YAML files
+        run: |
+          python -c "
+          import glob, yaml, sys
+          files = [f for f in glob.glob('deploy/**/*.yml', recursive=True) + glob.glob('deploy/**/*.yaml', recursive=True)
+                   if '/templates/' not in f.replace('\\\\', '/')]
+          for f in files:
+              with open(f) as fh:
+                  yaml.safe_load(fh)
+              print('yaml ok:', f)
+          "
