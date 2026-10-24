@@ -18,6 +18,12 @@ import secrets
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
+# --- константы вынесены FORGE refactor ---
+CONST_8 = 8
+CONST_16 = 16
+CONST_64 = 64
+CONST_400 = 400
+
 
 # ---------------------------------------------------------------------------
 # Детерминированная генерация «правдоподобных» секретов
@@ -42,7 +48,7 @@ class Honeytoken:
 class HoneytokenGenerator:
     def __init__(self, campaign_id: str | None = None, embed_secret: str | None = None):
         """embed_secret — HMAC-ключ watermark'а (секрет платформы)."""
-        self.campaign = campaign_id or f"camp-{uuid.uuid4().hex[:8]}"
+        self.campaign = campaign_id or f"camp-{uuid.uuid4().hex[:CONST_8]}"
         self.embed_secret = embed_secret or os.environ.get("APEX_HONEY_HMAC", "apex-default")
 
     # -- примитивы -----------------------------------------------------
@@ -51,7 +57,7 @@ class HoneytokenGenerator:
         return f"wmk-{self.campaign}-{secrets.token_hex(4)}"
 
     def _aws_secret(self) -> str:
-        return "AKIA" + _rnd(ALPHANUM, 16)  # заглушка-access key + секрет ниже
+        return "AKIA" + _rnd(ALPHANUM, CONST_16)  # заглушка-access key + секрет ниже
 
     def _aws_secret_key(self) -> str:
         return _rnd(ALPHANUM + "+/=", 40)
@@ -64,10 +70,10 @@ class HoneytokenGenerator:
 
     def _ssh_private_key(self, comment: str = "prod-deploy") -> str:
         # Достаточно правдоподобная структура (не реальный ключ).
-        body = base64.b64encode(secrets.token_bytes(400)).decode()
+        body = base64.b64encode(secrets.token_bytes(CONST_400)).decode()
         return (
             "-----BEGIN OPENSSH PRIVATE KEY-----\n"
-            + "\n".join(body[i:i + 64] for i in range(0, len(body), 64))
+            + "\n".join(body[i:i + CONST_64] for i in range(0, len(body), CONST_64))
             + "\n-----END OPENSSH PRIVATE KEY-----\n"
         )
 
@@ -92,7 +98,7 @@ class HoneytokenGenerator:
         }[kind]
         if kind in ("db_password", "api_key"):
             # watermark как «соль» в середине
-            value = value[:8] + wm.replace("-", "_")[:16] + value[8:]
+            value = value[:CONST_8] + wm.replace("-", "_")[:CONST_16] + value[CONST_8:]
         fp = hashlib.sha256(value.encode()).hexdigest()
         return Honeytoken(
             kind=kind, value=value, campaign_id=self.campaign,
@@ -224,5 +230,5 @@ if __name__ == "__main__":
     print(f"root={root}")
     print(f"tokens={len(tokens)}")
     for t in tokens:
-        print(" ", t.kind, t.fingerprint[:16], "->", t.inserted_path)
-    print(fs.fingerprint_manifest()[:400])
+        print(" ", t.kind, t.fingerprint[:CONST_16], "->", t.inserted_path)
+    print(fs.fingerprint_manifest()[:CONST_400])

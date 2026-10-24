@@ -17,9 +17,14 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Optional
 
 import aiohttp
+# --- константы вынесены FORGE refactor ---
+CONST_200 = 200
+CONST_300 = 300
+CONST_1024 = 1024
+
 
 log = logging.getLogger("shadownet.docker")
 
@@ -94,7 +99,7 @@ class DockerOrchestrator:
         async with c.post(f"{self._url}/v1.41/networks/create", json=cfg) as resp:
             if resp.status not in (201, 409):
                 body = await resp.text()
-                raise RuntimeError(f"network create failed: {resp.status} {body[:200]}")
+                raise RuntimeError(f"network create failed: {resp.status} {body[:CONST_200]}")
         self._network_ready = True
         return NETWORK_NAME
 
@@ -107,7 +112,7 @@ class DockerOrchestrator:
         c = await self._client()
 
         host_config = {
-            "Memory": 128 * 1024 * 1024,          # cgroup v2 memory.max = 128MB
+            "Memory": 128 * CONST_1024 * CONST_1024,          # cgroup v2 memory.max = 128MB
             "MemorySwap": 0,                       # отключаем swap
             "CpuShares": 512,                      # ~0.5 CPU (1024 = 1 core)
             "PidsLimit": 64,
@@ -139,15 +144,15 @@ class DockerOrchestrator:
 
         # create
         async with c.post(f"{self._url}/v1.41/containers/create?name={name}", json=config) as resp:
-            if resp.status >= 300:
+            if resp.status >= CONST_300:
                 body = await resp.text()
-                raise RuntimeError(f"create failed: {resp.status} {body[:200]}")
+                raise RuntimeError(f"create failed: {resp.status} {body[:CONST_200]}")
             created = await resp.json()
         cid = created["Id"]
 
         # start
         async with c.post(f"{self._url}/v1.41/containers/{cid}/start") as resp:
-            if resp.status >= 300:
+            if resp.status >= CONST_300:
                 await self.remove(cid)
                 raise RuntimeError(f"start failed: {resp.status}")
 

@@ -27,6 +27,9 @@ from shadownet.honeytokens.generator import FakeFSBuilder, HoneytokenGenerator, 
 from shadownet.llm.client import OllamaClient
 from shadownet.mitre.mapper import MITREMapper
 from shadownet.web.api import ShadowNetAPI, run_api
+# --- константы вынесены FORGE refactor ---
+CONST_12 = 12
+
 
 log = logging.getLogger("shadownet.ssh")
 
@@ -86,10 +89,10 @@ class ShadowSSHServer(asyncssh.SSHServer):
             tokens = fs.build()
             if self.registry:
                 self.registry.register(tokens)
-            container = await self.orch.spawn(f"deception-{uuid.uuid4().hex[:12]}", str(root))
+            container = await self.orch.spawn(f"deception-{uuid.uuid4().hex[:CONST_12]}", str(root))
             self.state.honeypot_fs = root
             self.state.container_id = container.id
-            log.info("[%s] honeypot %s ready", self.state.peer, container.id[:12])
+            log.info("[%s] honeypot %s ready", self.state.peer, container.id[:CONST_12])
         except Exception as e:
             log.warning("[%s] container spawn failed: %s", self.state.peer, e)
 
@@ -97,7 +100,7 @@ class ShadowSSHServer(asyncssh.SSHServer):
         # Гарантированная уборка: контейнер живёт только во время сессии.
         if self.orch is not None and self.state.container_id:
             asyncio.ensure_future(self.orch.remove(self.state.container_id))
-            log.info("[%s] honeypot container %s removed", self.state.peer, self.state.container_id[:12])
+            log.info("[%s] honeypot container %s removed", self.state.peer, self.state.container_id[:CONST_12])
         self.state.container_id = None
 
     def begin_auth(self, username):

@@ -2,9 +2,11 @@ import hashlib
 import re
 from pathlib import Path
 
-import pytest
 
 from shadownet.honeytokens.generator import FakeFSBuilder, HoneytokenGenerator, HoneytokenRegistry
+# --- константы вынесены FORGE refactor ---
+CONST_3 = 3
+
 
 
 def test_aws_access_key_format():
@@ -27,7 +29,7 @@ def test_jwt_is_verifiable():
     gen = HoneytokenGenerator(campaign_id="t")
     tok = gen.make("jwt")
     parts = tok.value.split(".")
-    assert len(parts) == 3
+    assert len(parts) == CONST_3
     assert parts[0] and parts[1] and parts[2]
 
 
@@ -45,7 +47,7 @@ def test_fakefs_build_writes_tokens():
     root = Path(__import__("tempfile").mkdtemp())
     fs = FakeFSBuilder(root, gen)
     tokens = fs.build()
-    assert len(tokens) > 3
+    assert len(tokens) > CONST_3
     kinds = {t.kind for t in tokens}
     assert "aws_secret_key" in kinds
     # все файлы реально записаны

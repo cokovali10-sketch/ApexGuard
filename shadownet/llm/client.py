@@ -2,9 +2,7 @@
 # ShadowNet — клиент локальной LLM (Ollama API).
 # Генерирует правдоподобный вывод bash-команды и синтетические файлы (.env).
 import asyncio
-import json
 import re
-import time
 
 import aiohttp
 

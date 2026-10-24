@@ -10,11 +10,9 @@
 Отдельный aiohttp web-сервер поверх honeypot-процесса. Не требует Docker:
 управление контейнерами опционально (передаётся orchestrator).
 """
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 import aiohttp
 from aiohttp import web

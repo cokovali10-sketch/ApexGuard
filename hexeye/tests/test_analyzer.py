@@ -16,6 +16,9 @@ from hexeye.analyzer import (
     risk_score,
     scan_secrets,
 )
+# --- константы вынесены FORGE refactor ---
+CONST_64 = 64
+
 
 
 def _build_elf() -> bytes:
@@ -48,7 +51,7 @@ def _elf64_header() -> bytes:
     h = ident + struct.pack("<HH", 2, 0x3E)   # e_type=EXEC, e_machine=x86_64
     h += struct.pack("<I", 1)                 # e_version
     h += struct.pack("<Q", 0x401000)          # e_entry
-    return h.ljust(64, b"\x00")
+    return h.ljust(CONST_64, b"\x00")
 
 
 def test_parse_elf_header():
@@ -81,7 +84,7 @@ def test_find_sections_real_elf():
 
 
 def test_scan_secrets():
-    blob = b"x" * 64 + b"AKIAIOSFODNN7EXAMPLE" + b"y" * 64
+    blob = b"x" * CONST_64 + b"AKIAIOSFODNN7EXAMPLE" + b"y" * CONST_64
     hits = scan_secrets(blob)
     types = {h["type"] for h in hits}
     assert "AWS_ACCESS_KEY" in types

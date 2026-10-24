@@ -14,16 +14,28 @@ import hashlib
 import json
 import re
 import struct
-import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
+# --- константы вынесены FORGE refactor ---
+CONST_0_25 = 0.25
+CONST_0_45 = 0.45
+CONST_3 = 3
+CONST_4 = 4
+CONST_16 = 16
+CONST_40 = 40
+CONST_58 = 58
+CONST_60 = 60
+CONST_62 = 62
+CONST_64 = 64
+CONST_80 = 80
+
 
 # ---------------------------------------------------------------------------
 # 1. Детект формата и заголовки
 # ---------------------------------------------------------------------------
 
 def detect_format(data: bytes) -> str | None:
-    if data[:4] == b"\x7fELF":
+    if data[:CONST_4] == b"\x7fELF":
         return "elf"
     if data[:2] == b"MZ":
         return "pe"
@@ -32,14 +44,14 @@ def detect_format(data: bytes) -> str | None:
 
 def parse_elf_header(data: bytes) -> dict:
     # ELF64 header: e_type(2) e_machine(2) e_version(4) e_entry(8) ...
-    if len(data) < 64:
+    if len(data) < CONST_64:
         return {}
-    e_type, e_machine, e_version = struct.unpack_from("<HHI", data, 16)
+    e_type, e_machine, e_version = struct.unpack_from("<HHI", data, CONST_16)
     e_entry = struct.unpack_from("<Q", data, 24)[0]
     return {
         "class": "ELF64",
-        "type": {1: "REL", 2: "EXEC", 3: "DYN"}.get(e_type, e_type),
-        "machine": {0x3E: "x86_64", 0x28: "ARM", 0xB7: "AARCH64"}.get(e_machine, e_machine),
+        "type": {1: "REL", 2: "EXEC", CONST_3: "DYN"}.get(e_type, e_type),
+        "machine": {CONST_62: "x86_64", CONST_40: "ARM", 0xB7: "AARCH64"}.get(e_machine, e_machine),
         "version": e_version,
         "entry": hex(e_entry),
     }
@@ -47,12 +59,12 @@ def parse_elf_header(data: bytes) -> dict:
 
 def parse_pe_header(data: bytes) -> dict:
     # DOS header: e_lfanew @ 0x3C → PE signature
-    if len(data) < 0x40:
+    if len(data) < CONST_64:
         return {}
-    e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
-    if data[e_lfanew:e_lfanew + 4] != b"PE\x00\x00":
+    e_lfanew = struct.unpack_from("<I", data, CONST_60)[0]
+    if data[e_lfanew:e_lfanew + CONST_4] != b"PE\x00\x00":
         return {}
-    coff = e_lfanew + 4
+    coff = e_lfanew + CONST_4
     machine = struct.unpack_from("<H", data, coff)[0]
     return {
         "class": "PE32+",
@@ -66,29 +78,29 @@ def parse_pe_header(data: bytes) -> dict:
 # ---------------------------------------------------------------------------
 def find_text_section_elf64(data: bytes) -> tuple[int, int] | None:
     """Возвращает (file_offset, size) секции .text для ELF64, либо None."""
-    if len(data) < 64 or data[:4] != b"\x7fELF" or data[4] != 2:
+    if len(data) < CONST_64 or data[:CONST_4] != b"\x7fELF" or data[CONST_4] != 2:
         return None
-    e_shoff = struct.unpack_from("<Q", data, 0x28)[0]
-    e_shentsize = struct.unpack_from("<H", data, 0x3A)[0]
-    e_shnum = struct.unpack_from("<H", data, 0x3C)[0]
-    e_shstrndx = struct.unpack_from("<H", data, 0x3E)[0]
+    e_shoff = struct.unpack_from("<Q", data, CONST_40)[0]
+    e_shentsize = struct.unpack_from("<H", data, CONST_58)[0]
+    e_shnum = struct.unpack_from("<H", data, CONST_60)[0]
+    e_shstrndx = struct.unpack_from("<H", data, CONST_62)[0]
     if e_shoff == 0 or e_shentsize == 0 or e_shnum == 0:
         return None
     # таблица секций (ELF64 shdr: 64 байта)
     shdrs = []
     for i in range(e_shnum):
         off = e_shoff + i * e_shentsize
-        if off + 64 > len(data):
+        if off + CONST_64 > len(data):
             break
         sh_name, _, sh_flags = struct.unpack_from("<IIQ", data, off)
-        sh_addr, sh_offset, sh_size = struct.unpack_from("<QQQ", data, off + 16)
+        sh_addr, sh_offset, sh_size = struct.unpack_from("<QQQ", data, off + CONST_16)
         shdrs.append((sh_name, sh_flags, sh_addr, sh_offset, sh_size))
     if e_shstrndx >= len(shdrs):
         return None
-    str_off = shdrs[e_shstrndx][3]
-    str_size = shdrs[e_shstrndx][4]
+    str_off = shdrs[e_shstrndx][CONST_3]
+    str_size = shdrs[e_shstrndx][CONST_4]
     strtab = data[str_off:str_off + str_size]
-    SHF_EXECINSTR = 0x4
+    SHF_EXECINSTR = CONST_4
     for sh_name, sh_flags, _addr, sh_offset, sh_size in shdrs:
         if not sh_flags & SHF_EXECINSTR:
             continue
@@ -102,24 +114,24 @@ def find_text_section_elf64(data: bytes) -> tuple[int, int] | None:
 
 def find_sections(data: bytes) -> list[dict]:
     """ELF64: перечисление секций с именами, офсетами и флагами."""
-    if len(data) < 64 or data[:4] != b"\x7fELF" or data[4] != 2:
+    if len(data) < CONST_64 or data[:CONST_4] != b"\x7fELF" or data[CONST_4] != 2:
         return []
-    e_shoff = struct.unpack_from("<Q", data, 0x28)[0]
-    e_shentsize = struct.unpack_from("<H", data, 0x3A)[0]
-    e_shnum = struct.unpack_from("<H", data, 0x3C)[0]
-    e_shstrndx = struct.unpack_from("<H", data, 0x3E)[0]
+    e_shoff = struct.unpack_from("<Q", data, CONST_40)[0]
+    e_shentsize = struct.unpack_from("<H", data, CONST_58)[0]
+    e_shnum = struct.unpack_from("<H", data, CONST_60)[0]
+    e_shstrndx = struct.unpack_from("<H", data, CONST_62)[0]
     if e_shoff == 0 or e_shentsize == 0 or e_shnum == 0 or e_shstrndx >= e_shnum:
         return []
     shdrs = []
     for i in range(e_shnum):
         off = e_shoff + i * e_shentsize
-        if off + 64 > len(data):
+        if off + CONST_64 > len(data):
             break
         sh_name, _, sh_flags = struct.unpack_from("<IIQ", data, off)
-        sh_addr, sh_offset, sh_size = struct.unpack_from("<QQQ", data, off + 16)
+        sh_addr, sh_offset, sh_size = struct.unpack_from("<QQQ", data, off + CONST_16)
         shdrs.append((sh_name, sh_flags, sh_addr, sh_offset, sh_size))
-    str_off = shdrs[e_shstrndx][3]
-    str_size = shdrs[e_shstrndx][4]
+    str_off = shdrs[e_shstrndx][CONST_3]
+    str_size = shdrs[e_shstrndx][CONST_4]
     strtab = data[str_off:str_off + str_size]
     out = []
     for sh_name, sh_flags, sh_addr, sh_offset, sh_size in shdrs:
@@ -161,7 +173,7 @@ def scan_secrets(data: bytes) -> list[dict]:
             snippet = m.group(0)
             found.append({
                 "type": name,
-                "value": snippet.decode(errors="replace")[:64],
+                "value": snippet.decode(errors="replace")[:CONST_64],
                 "offset": hex(m.start()),
             })
     return found
@@ -322,8 +334,8 @@ def risk_score(r: HexEyeReport) -> float:
     score = 0.0
     if r.format in ("elf", "pe"):
         score += 0.1
-    score += min(len(r.secrets) * 0.15, 0.45)          # секреты
-    score += min(len(r.candidate_vulns) * 0.25, 0.5)   # кандидаты в уязвимости
+    score += min(len(r.secrets) * 0.15, CONST_0_45)          # секреты
+    score += min(len(r.candidate_vulns) * CONST_0_25, 0.5)   # кандидаты в уязвимости
     score += min(len(r.dangerous_calls) * 0.02, 0.2)   # опасные sink-вызовы
     return round(min(score, 1.0), 2)
 
@@ -331,9 +343,9 @@ def risk_score(r: HexEyeReport) -> float:
 def risk_label(score: float) -> str:
     if score >= 0.7:
         return "critical"
-    if score >= 0.45:
+    if score >= CONST_0_45:
         return "high"
-    if score >= 0.25:
+    if score >= CONST_0_25:
         return "medium"
     return "low"
 
@@ -348,10 +360,10 @@ if __name__ == "__main__":
     if args.as_json:
         print(json.dumps(asdict(rep), indent=2))
     else:
-        print(f"[hexeye] {rep.file} sha256={rep.sha256[:16]} format={rep.format} risk={rep.risk_score} ({rep.risk_label})")
+        print(f"[hexeye] {rep.file} sha256={rep.sha256[:CONST_16]} format={rep.format} risk={rep.risk_score} ({rep.risk_label})")
         for h in rep.secrets:
-            print(f"  [!SECRET] {h['type']} @ {h['offset']}: {h['value'][:40]}")
+            print(f"  [!SECRET] {h['type']} @ {h['offset']}: {h['value'][:CONST_40]}")
         for sink, caller in rep.dangerous_calls:
-            print(f"  [!CALL] {sink} <- {caller[:80]}")
+            print(f"  [!CALL] {sink} <- {caller[:CONST_80]}")
         for v in rep.candidate_vulns:
-            print(f"  [VULN] {v['kind']} {v['addr']}: {v['detail'][:80]}")
+            print(f"  [VULN] {v['kind']} {v['addr']}: {v['detail'][:CONST_80]}")

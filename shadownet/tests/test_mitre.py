@@ -1,4 +1,3 @@
-import pytest
 
 from shadownet.mitre.mapper import MITREMapper
 

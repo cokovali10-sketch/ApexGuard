@@ -10,6 +10,9 @@ from aiohttp import web
 
 import hexeye.server as hx
 from hexeye.analyzer import analyze
+# --- константы вынесены FORGE refactor ---
+CONST_200 = 200
+
 
 
 @pytest.fixture(scope="module")
@@ -44,11 +47,11 @@ def test_analyze_endpoint(sample_elf):
         try:
             async with aiohttp.ClientSession() as s:
                 async with s.post(f"http://127.0.0.1:{port}/analyze", json={"path": sample_elf}) as resp:
-                    assert resp.status == 200
+                    assert resp.status == CONST_200
                     body = await resp.json()
                     assert body["format"] == "elf"
                 async with s.get(f"http://127.0.0.1:{port}/healthz") as resp:
-                    assert resp.status == 200
+                    assert resp.status == CONST_200
                 async with s.get(f"http://127.0.0.1:{port}/metrics") as resp:
                     text = await resp.text()
                     assert "hexeye_analyzed_total 1" in text
