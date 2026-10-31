@@ -211,3 +211,32 @@ make proto       # buf lint + buf generate
 ## License
 
 [Apache License 2.0](LICENSE)
+## Problem
+
+Security operations platforms are fragmented: kernel detection, honeypots, fuzzing, reverse engineering, and SOC consoles are separate tools. ApexGuard fuses them into a single normalized event bus for unified visibility.
+
+## Architecture
+
+- **core** (Go): orchestrates modules, gRPC event bus.
+- **kernelshield** (Rust): eBPF-based threat detection.
+- **shadownet** (Python): AI deception honeynet.
+- **pulsefuzz** (Go): coverage-guided API fuzzing.
+- **hexeye** (Python/Go): binary reverse engineering.
+- **apexconsole** (TypeScript): real-time 3D SOC console.
+- **proto**: gRPC contracts.
+
+## Trade-offs
+
+- Polyglot (Go/Rust/Python/TS) increases complexity but lets each module use the best tool.
+- eBPF requires Linux kernel; Windows/macOS unsupported for kernelshield.
+- Heavyweight full-stack; not suited for lightweight single-host deployment.
+
+## Benchmarks
+
+See CI `go test -race` and pytest coverage (fail_under = 50%).
+
+## Limitations
+
+- eBPF kernelshield only runs on Linux.
+- Hexeye tests skip on non-ELF environments (Windows).
+- No production user validation yet.
