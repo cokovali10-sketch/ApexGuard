@@ -12,7 +12,9 @@
 
 services:
   apexcore:
-    build: ../core
+    build:
+      context: ..
+      dockerfile: core/Dockerfile
     container_name: apexcore
     environment:
       LISTEN_GRPC: ":50051"
@@ -46,7 +48,9 @@ services:
     networks: [apex]
 
   shadownet:
-    build: ../shadownet
+    build:
+      context: ..
+      dockerfile: shadownet/Dockerfile
     container_name: shadownet
     depends_on:
       - ollama
@@ -69,7 +73,9 @@ services:
       start_period: 10s
 
   pulsefuzz:
-    build: ../pulsefuzz
+    build:
+      context: ..
+      dockerfile: pulsefuzz/Dockerfile
     container_name: pulsefuzz
     entrypoint:
       - pulsefuzz
@@ -95,7 +101,9 @@ services:
       start_period: 10s
 
   hexeye:
-    build: ../hexeye
+    build:
+      context: ..
+      dockerfile: hexeye/Dockerfile
     container_name: hexeye
     ports:
       - "9092:9092"
@@ -111,7 +119,9 @@ services:
       start_period: 10s
 
   apexconsole:
-    build: ../apexconsole
+    build:
+      context: ..
+      dockerfile: apexconsole/Dockerfile
     container_name: apexconsole
     ports:
       - "80:80"

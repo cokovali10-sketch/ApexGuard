@@ -22,8 +22,11 @@ def sample_elf():
         (d / "go.mod").write_text("module sample\n\ngo 1.21\n")
         (d / "main.go").write_text('package main\nfunc main() { println("hi") }\n')
         out = d / "a.out"
-        r = subprocess.run(["go", "build", "-o", str(out), "."], cwd=d, capture_output=True)
-        if r.returncode != 0 or not out.read_bytes().startswith(b"\x7fELF"):
+        try:
+            r = subprocess.run(["go", "build", "-o", str(out), "."], cwd=d, capture_output=True)
+        except FileNotFoundError:
+            pytest.skip("go toolchain not available")
+        if r.returncode != 0 or not out.exists() or not out.read_bytes().startswith(b"\x7fELF"):
             pytest.skip("cannot build sample ELF")
         return str(out)
 
