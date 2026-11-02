@@ -17,8 +17,8 @@ CONST_200 = 200
 
 @pytest.fixture(scope="module")
 def sample_elf():
-    with tempfile.TemporaryDirectory() as d:
-        d = Path(d)
+    d = Path(tempfile.mkdtemp())
+    try:
         (d / "go.mod").write_text("module sample\n\ngo 1.21\n")
         (d / "main.go").write_text('package main\nfunc main() { println("hi") }\n')
         out = d / "a.out"
@@ -28,7 +28,10 @@ def sample_elf():
             pytest.skip("go toolchain not available")
         if r.returncode != 0 or not out.exists() or not out.read_bytes().startswith(b"\x7fELF"):
             pytest.skip("cannot build sample ELF")
-        return str(out)
+        yield str(out)
+    finally:
+        import shutil
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def test_report_shape(sample_elf):
