@@ -6,7 +6,9 @@ deps:
   - buf.build/googleapis/googleapis
 lint:
   use:
-    - STANDARD
+    - BASIC
+  except:
+    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE

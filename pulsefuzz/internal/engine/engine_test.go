@@ -61,13 +61,16 @@ func TestFuzzOperationRunsAndCounts(t *testing.T) {
 }
 
 func TestFuzzOperationQueryAndBody(t *testing.T) {
+	var mu sync.Mutex
 	var lastQuery string
 	var lastBody string
 	var lastMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
 		lastQuery = r.URL.RawQuery
 		lastBody = r.Method + ":" + r.URL.Path
 		lastMethod = r.Method
+		mu.Unlock()
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"ok":true}`))
 	}))
@@ -76,11 +79,14 @@ func TestFuzzOperationQueryAndBody(t *testing.T) {
 	e := newEngine(t, srv.URL)
 	// GET: параметры идут в query
 	e.FuzzOperation("GET", "/api/account", map[string]any{}, map[string]any{"user_id": float64(1), "page": float64(2)})
-	if lastQuery == "" {
+	mu.Lock()
+	lq := lastQuery
+	mu.Unlock()
+	if lq == "" {
 		t.Fatal("GET query params missing")
 	}
-	if !strings.Contains(lastQuery, "user_id") {
-		t.Fatalf("expected user_id in query, got %q", lastQuery)
+	if !strings.Contains(lq, "user_id") {
+		t.Fatalf("expected user_id in query, got %q", lq)
 	}
 	_ = lastBody
 	_ = lastMethod

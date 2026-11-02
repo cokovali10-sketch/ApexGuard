@@ -45,3 +45,5 @@ shadownet_events.jsonl
 state/
 *.pem
 !**/testdata/**/*.pem
+
+.coverage
