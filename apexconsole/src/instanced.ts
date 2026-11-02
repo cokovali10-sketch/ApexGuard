@@ -30,7 +30,6 @@ export class EventParticlePool {
 
   // prealloc: 0 аллокаций на событие после конструктора
   private posA = new THREE.Vector3();
-  private dirA = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, size = POOL_SIZE) {
     const geo = new THREE.SphereGeometry(0.18, 8, 8);

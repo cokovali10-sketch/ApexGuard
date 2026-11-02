@@ -5,7 +5,7 @@ const PANIC_KEY = "apex.panic.engaged";
 
 export class PanicController {
   private engaged = false;
-  private readonly onToggle: (engaged: boolean) => void;
+  onToggle: (engaged: boolean) => void;
 
   constructor(onToggle: (engaged: boolean) => void) {
     this.onToggle = onToggle;
@@ -60,7 +60,7 @@ export function mountPanicButton(controller: PanicController) {
       await controller.release();
     }
   };
-  controller.onToggle = (eng) => {
+  controller.onToggle = (eng: boolean) => {
     btn.textContent = eng ? "UN-GAP (release)" : "AIR-GAP (panic)";
     btn.classList.toggle("engaged", eng);
   };
