@@ -28,6 +28,7 @@ bin/
 *.test
 *.out
 coverage.*
+!**/coverage/*.go
 
 # --- Rust ---
 target/
