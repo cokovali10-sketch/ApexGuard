@@ -27,7 +27,7 @@ sharded-slab = "0.1"
 
 [build-dependencies]
 libbpf-cargo = "0.24"
-tonic-build = "0.12"
+tonic-build = "0.14"
 protoc-bin-vendored = "3"
 
 [profile.release]
