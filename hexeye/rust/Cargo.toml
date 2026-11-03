@@ -6,7 +6,7 @@ description = "HexEye static analyzer core (ELF/PE, secrets, CFG, UAF/DoubleFree
 license = "Apache-2.0"
 
 [dependencies]
-goblin = { version = "0.9", features = ["elf32", "elf64", "pe32", "pe64"] }
+goblin = { version = "0.10", features = ["elf32", "elf64", "pe32", "pe64"] }
 capstone = { version = "0.12", features = ["full"] }
 memmap2 = "0.9"
 rayon = "1.10"
