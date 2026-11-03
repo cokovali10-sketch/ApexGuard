@@ -26,7 +26,7 @@ num_cpus = "1"
 sharded-slab = "0.1"
 
 [build-dependencies]
-libbpf-cargo = "0.24"
+libbpf-cargo = "0.27"
 tonic-build = "0.12"
 protoc-bin-vendored = "3"
 
