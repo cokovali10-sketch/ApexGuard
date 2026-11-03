@@ -1,9 +1,9 @@
 module github.com/apexguard/apexguard/core
 
-go 1.22
+go 1.23
 
 require (
-	github.com/coder/websocket v1.8.12
+	github.com/coder/websocket v1.8.15
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0
 	github.com/prometheus/client_golang v1.19.1
